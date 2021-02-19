@@ -1,4 +1,6 @@
-import React, {useState, useEffect} from 'react';
+import React, {useEffect, useState} from "react";
+import {interval, Subject} from "rxjs";
+import {takeUntil} from "rxjs/operators";
 import './App.css';
 
 function App() {
@@ -10,17 +12,18 @@ function App() {
     useEffect(() => {
         !watchOn ? setBtnText('Start') : setBtnText('Stop');
 
-        let interval = null;
-
-        if (watchOn) {
-            interval = setInterval(() => {
-                setTime(prevTime => prevTime + 1)
-            }, 1000)
-        } else {
-            clearInterval(interval);
-        }
-
-        return () => clearInterval(interval)
+        const unsubscribe$ = new Subject();
+        interval(1000)
+            .pipe(takeUntil(unsubscribe$))
+            .subscribe(() => {
+                if (watchOn) {
+                    setTime(val => val + 1);
+                }
+            });
+        return () => {
+            unsubscribe$.next();
+            unsubscribe$.complete();
+        };
 
     }, [watchOn]);
 
@@ -31,8 +34,8 @@ function App() {
         }
     }
     const handleWait = () => {
-        if (time !== 0 && watchOn) {
-            setWatchOn(prevState => !prevState);
+        if (time !== 0) {
+            setWatchOn(false)
         }
     }
     const handleReset = () => {
